@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Nos aseguramos de estar en el directorio raíz
 cd "$(dirname "$0")/.." || exit
 
 echo "📊 --- ESTADÍSTICAS DEL SISTEMA DE DISTRIBUCIÓN --- 📊"

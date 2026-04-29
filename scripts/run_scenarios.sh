@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.." || exit
 mkdir -p results
 mkdir -p results2
 
-MEMORIES=("50mb" "200mb" "500mb")
+MEMORIES=("200mb" "500mb")
 DISTRIBUTIONS=("ZIPF" "UNIFORME")
 POLICIES=("allkeys-lfu" "allkeys-random")
 
@@ -19,22 +19,21 @@ for mem in "${MEMORIES[@]}"; do
             export DISTRIBUTION=$dist
             export REDIS_POLICY=$pol
             
-            # Formatear el nombre del archivo de salida
+            # salida de los archivos de metricas
             POL_SHORT=${pol/allkeys-/}
             DIST_LOWER=$(echo "$dist" | tr '[:upper:]' '[:lower:]')
             OUTPUT_FILE="results2/${mem}_${POL_SHORT}_${DIST_LOWER}.json"
             
-            echo "🛑 Deteniendo y limpiando contenedores..."
+            echo "Deteniendo y limpiando contenedores..."
             docker compose down -v
             
-            echo "🏗️  Iniciando servicios..."
+            echo "Iniciando servicios..."
             docker compose up --build -d
             
-            echo "⏳ Ejecutando tráfico y esperando a que termine (mostrando logs en vivo)..."
-            # Muestra los logs de trafic en tiempo real; el comando finalizará por sí solo cuando trafic termine.
+            echo "Ejecutando tráfico y esperando a que termine (mostrando logs en vivo)..."
             docker compose logs -f trafic
             
-            echo "📊 Recolectando métricas para este escenario..."
+            echo "Recolectando métricas para este escenario..."
             python3 scripts/collect_scenario_metrics.py "$OUTPUT_FILE" "$mem" "$dist" "$pol"
             
         done
