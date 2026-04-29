@@ -84,7 +84,7 @@ class QueryPayload(BaseModel):
 
 
 # agrega data basura a la respuesta
-def increase_size(resultado, target_kb=200):
+def increase_size(resultado, target_kb):
     target_bytes = target_kb * 1024
     current_json = json.dumps(resultado)
     current_size = len(current_json.encode("utf-8"))
@@ -167,7 +167,7 @@ def process_query(payload: QueryPayload):
         print("Error procesando query", e)
         resultado = {"error": str(e)}
 
-    resultado = increase_size(resultado, target_kb=50)
+    resultado = increase_size(resultado, target_kb=200)
     redis_client.setex(cache_key, 3600, json.dumps(resultado))
 
     return resultado
