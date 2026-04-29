@@ -58,7 +58,7 @@ def main():
 
     time.sleep(10)
 
-    TOTAL_CONSULTAS = 20000
+    TOTAL_CONSULTAS = 1000
     start_global = time.time()
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:

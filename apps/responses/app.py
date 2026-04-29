@@ -167,8 +167,9 @@ def process_query(payload: QueryPayload):
         print("Error procesando query", e)
         resultado = {"error": str(e)}
 
+    ttl = 90
     resultado = increase_size(resultado, target_kb=200)
-    redis_client.setex(cache_key, 3600, json.dumps(resultado))
+    redis_client.setex(cache_key, ttl, json.dumps(resultado))
 
     return resultado
 
