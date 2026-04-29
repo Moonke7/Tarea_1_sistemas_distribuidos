@@ -1,10 +1,9 @@
 #!/bin/bash
 cd "$(dirname "$0")/.." || exit
 
-mkdir -p results
-mkdir -p results2
+mkdir -p resulta2
 
-MEMORIES=("200mb" "500mb")
+MEMORIES=("50mb")
 DISTRIBUTIONS=("ZIPF" "UNIFORME")
 POLICIES=("allkeys-lfu" "allkeys-random")
 
@@ -22,7 +21,7 @@ for mem in "${MEMORIES[@]}"; do
             # salida de los archivos de metricas
             POL_SHORT=${pol/allkeys-/}
             DIST_LOWER=$(echo "$dist" | tr '[:upper:]' '[:lower:]')
-            OUTPUT_FILE="results2/${mem}_${POL_SHORT}_${DIST_LOWER}.json"
+            OUTPUT_FILE="resulta2/${mem}_${POL_SHORT}_${DIST_LOWER}.json"
             
             echo "Deteniendo y limpiando contenedores..."
             docker compose down -v
