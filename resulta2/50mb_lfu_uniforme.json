@@ -1,0 +1,64 @@
+{
+  "escenario": {
+    "memoria": "50mb",
+    "distribucion": "UNIFORME",
+    "politica": "allkeys-lfu"
+  },
+  "resultados": {
+    "hit_rate": {
+      "hits": 5026,
+      "misses": 14974,
+      "total": 20000,
+      "hit_rate_porcentaje": 25.13
+    },
+    "throughput": {
+      "total_consultas": 20000,
+      "tiempo_total_segundos": 124.23,
+      "throughput_qps": 160.99
+    },
+    "latencia": {
+      "latencia_p50_ms": 129.3172836303711,
+      "latencia_p95_ms": 184.25221443176267
+    },
+    "eviction": {
+      "evicted_keys": 14664,
+      "expired_keys": 0,
+      "evictions_per_min": 6469.41
+    },
+    "efficiency": {
+      "cache_efficiency": -104.5
+    },
+    "zonas": [
+      {
+        "zona": "Z1",
+        "hits": 1080,
+        "total": 4060,
+        "hit_rate_porcentaje": 26.6
+      },
+      {
+        "zona": "Z2",
+        "hits": 1010,
+        "total": 4123,
+        "hit_rate_porcentaje": 24.5
+      },
+      {
+        "zona": "Z3",
+        "hits": 988,
+        "total": 3946,
+        "hit_rate_porcentaje": 25.04
+      },
+      {
+        "zona": "Z4",
+        "hits": 990,
+        "total": 3852,
+        "hit_rate_porcentaje": 25.7
+      },
+      {
+        "zona": "Z5",
+        "hits": 958,
+        "total": 4019,
+        "hit_rate_porcentaje": 23.84
+      }
+    ]
+  }
+}
