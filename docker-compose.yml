@@ -15,7 +15,7 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-500mb} --maxmemory-policy ${REDIS_POLICY:-allkeys-lru}
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-50mb} --maxmemory-policy ${REDIS_POLICY:-allkeys-lru}
 
   cache:
     build:
