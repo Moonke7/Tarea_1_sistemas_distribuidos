@@ -18,7 +18,7 @@ Inicialmente, se debe clonar este repositorio y guardarlo dentro del directorio 
 Luego, dentro del proyecto, debe dirigirse al directorio `scripts`, dentro de este encontrará archivos `.sh`, los cuales automatizan procesos como:
 
 
-> [!IMPORTANT] Estos scripts están pensados para ser utilizados en sistemas Unix (Linux-macOS)
+==Estos scripts están pensados para ser utilizados en sistemas Unix (Linux-macOS)==
 
 ## Iniciar la simulación 
 
