@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  trafic:
+    build:
+      context: ./apps/trafic
+      dockerfile: Dockerfile
+    environment:
+      - DISTRIBUTION=${DISTRIBUTION:-ZIPF} # ZIPF o UNIFORME
+      - CACHE_URL=http://cache:5000/query
+    depends_on:
+      - cache
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-500mb} --maxmemory-policy ${REDIS_POLICY:-allkeys-lru}
+
+  cache:
+    build:
+      context: ./apps/cache
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RESPONSES_URL=http://responses:5000/process
+      - POSTGRES_HOST=metrics
+    depends_on:
+      - redis
+      - responses
+      - metrics
+
+  responses:
+    build:
+      context: ./apps/responses
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=metrics
+    volumes:
+      - ./dataset_f.csv:/app/dataset_f.csv
+    depends_on:
+      - redis
+      - metrics
+
+  metrics:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=sistemas_d
+      - POSTGRES_PASSWORD=sistemas_d
+      - POSTGRES_DB=metrics_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - metrics_data:/var/lib/postgresql/data
+      - ./apps/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  metrics_data:
