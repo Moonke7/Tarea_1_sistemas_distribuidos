@@ -22,7 +22,13 @@ Luego, dentro del proyecto, debe dirigirse al directorio `scripts`, dentro de es
 
 ## Iniciar la simulación
 
-Para levantar los contenedores del Docker necesarios para el sistema de forma automática se utiliza el script `run_scenarios.sh`
+Para ejecutar una unica ejecucion y ver los logs, se utiliza:
+
+```bash
+./restart_and_logs.sh
+```
+
+Para levantar los contenedores del Docker en todos los escenarios solicitados para el sistema de forma automática se utiliza el script `run_scenarios.sh`
 
 ```bash
 ./run_scenarios.sh
