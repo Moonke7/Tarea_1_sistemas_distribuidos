@@ -96,7 +96,7 @@ def increase_size(resultado, target_kb):
     return resultado
 
 
-def get_zona(zone_id, conf_min=0.0):
+def get_zona(zone_id, conf_min):
     return df.query("zone_id == @zone_id and confidence >= @conf_min")
 
 
