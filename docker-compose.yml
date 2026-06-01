@@ -37,6 +37,7 @@ services:
       - KAFKA_CONSUMER_GROUP=geo-consumers
       - KAFKA_PARTITIONS=1
       - MAX_RETRIES=3
+      - FLUSH_PER_MESSAGE=${FLUSH_PER_MESSAGE:-true}
     depends_on:
       - kafka
     networks:
