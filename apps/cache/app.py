@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import redis
 import requests
 import os
@@ -20,6 +20,7 @@ redis_client = redis.Redis(
 
 
 class QueryPayload(BaseModel):
+    model_config = ConfigDict(extra='ignore')
     cache_key: str
     query_data: dict
 
