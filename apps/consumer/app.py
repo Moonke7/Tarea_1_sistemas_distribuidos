@@ -11,6 +11,7 @@ from kafka.errors import NoBrokersAvailable
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", 3))
 MAX_REQUESTS_PER_SECOND = int(os.environ.get("MAX_REQUESTS_PER_SECOND", 0))
+IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 15))
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "metrics")
 CACHE_URL = os.environ.get("CACHE_URL", "http://cache:5000/query")
 RESPONSES_URL = os.environ.get("RESPONSES_URL", "http://responses:5000/process")
@@ -115,9 +116,11 @@ def process_message(msg_value, msg_topic):
 
     try:
         if msg_topic == KAFKA_TOPIC_QUERIES:
+            print("✅ Mensaje desde queries")
             source = "cache"
             res = requests.post(CACHE_URL, json=payload, timeout=10)
         else:
+            print("❌ Mensaje desde retry")
             source = "retry-direct"
             res = requests.post(RESPONSES_URL, json=payload, timeout=10)
 
@@ -172,7 +175,7 @@ def process_message(msg_value, msg_topic):
                 retry_count,
                 f"Max retries ({MAX_RETRIES}) reached: {error_reason}",
             )
-            print(f"DLQ: {message_id} " f"despues de: {retry_count} intentos")
+            print(f"💀 DLQ: {message_id} " f"despues de: {retry_count} intentos")
         else:
             retry_msg = {
                 "message_id": message_id,
@@ -182,7 +185,7 @@ def process_message(msg_value, msg_topic):
             }
             producer.send(KAFKA_TOPIC_RETRY, value=retry_msg)
             producer.flush()
-            print(f"RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
+            print(f"❌❌ RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
 
         return False
 
@@ -231,27 +234,44 @@ def main():
         1.0 / MAX_REQUESTS_PER_SECOND if MAX_REQUESTS_PER_SECOND > 0 else 0
     )
 
-    for msg in consumer:
-        msg_start = time.time()
+    idle_since = time.time()
 
-        try:
-            msg_value = msg.value
-            msg_topic = msg.topic
-        except Exception as e:
-            print("Error parseando mensaje", e)
+    while True:
+        # poll con timeout para poder detectar idleness
+        records = consumer.poll(timeout_ms=1000)
+
+        if not records:
+            # sin mensajes: revisar timeout
+            if time.time() - idle_since >= IDLE_TIMEOUT_SECONDS:
+                print(f"[CONSUMER] Sin mensajes por {IDLE_TIMEOUT_SECONDS}s. Saliendo.")
+                break
             continue
 
-        print(
-            f"Recibido de '{msg_topic}': {msg_value.get('message_id', 'unknown')[:12]}..."
-        )
+        # hay mensajes: resetear timer de idle
+        idle_since = time.time()
 
-        process_message(msg_value, msg_topic)
+        for tp, messages in records.items():
+            for msg in messages:
+                msg_start = time.time()
 
-        if rate_limit_interval > 0:
-            elapsed = time.time() - msg_start
-            sleep_time = rate_limit_interval - elapsed
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+                try:
+                    msg_value = msg.value
+                    msg_topic = msg.topic
+                except Exception as e:
+                    print("Error parseando mensaje", e)
+                    continue
+
+                print(
+                    f"Recibido de '{msg_topic}': {msg_value.get('message_id', 'unknown')[:12]}..."
+                )
+
+                process_message(msg_value, msg_topic)
+
+                if rate_limit_interval > 0:
+                    elapsed = time.time() - msg_start
+                    sleep_time = rate_limit_interval - elapsed
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
 
     consumer.close()
 

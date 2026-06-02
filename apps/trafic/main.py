@@ -1,9 +1,9 @@
+from asyncio import sleep
 import os
 import time
 import uuid
 import json
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor
 from kafka import KafkaProducer
 from dist_uniforme import generar_query_uniforme
 from dist_zipf import generar_query_zipf
@@ -36,21 +36,18 @@ def ejecutar_consulta(i, total, dist_type, producer):
             query = generar_query_uniforme()
 
         cache_key = generar_cache_key(query)
-        
+
         message = {
             "message_id": str(uuid.uuid4()),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "retry_count": 0,
-            "payload": {
-                "cache_key": cache_key,
-                "query_data": query
-            }
+            "payload": {"cache_key": cache_key, "query_data": query},
         }
 
         producer.send(KAFKA_TOPIC_QUERIES, value=message)
         if FLUSH_PER_MESSAGE:
             producer.flush()
-        
+
         print(f"[TRÁFICO {i}/{total}] Mensaje enviado a Kafka: {message['message_id']}")
 
     except Exception as e:
@@ -59,25 +56,23 @@ def ejecutar_consulta(i, total, dist_type, producer):
 
 def main():
     dist_type = os.environ.get("DISTRIBUTION", "UNIFORME").upper()
-    max_workers = int(os.environ.get("MAX_WORKERS", 20))
 
     time.sleep(10)
 
     producer = KafkaProducer(
         bootstrap_servers=[KAFKA_BOOTSTRAP_SERVERS],
-        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
-    TOTAL_CONSULTAS = 20000
+    TOTAL_CONSULTAS = 1000
     start_global = time.time()
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for i in range(1, TOTAL_CONSULTAS + 1):
-            executor.submit(ejecutar_consulta, i, TOTAL_CONSULTAS, dist_type, producer)
+    for i in range(1, TOTAL_CONSULTAS + 1):
+        ejecutar_consulta(i, TOTAL_CONSULTAS, dist_type, producer)
 
     total_time = time.time() - start_global
     print("Tiempo total de ejecucion: ", total_time)
-    
+
     producer.flush()
     producer.close()
 

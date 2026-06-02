@@ -17,11 +17,11 @@ def get_pg_json_agg(query):
     return json.loads(res) if res else []
 
 def main():
-    if len(sys.argv) != 5:
-        print("Uso: collect_scenario_metrics.py <file> <mem> <dist> <pol>")
+    if len(sys.argv) < 4:
+        print("Uso: collect_scenario_metrics.py <file> <consumers> <dist>")
         sys.exit(1)
         
-    out_file, mem, dist, pol = sys.argv[1:5]
+    out_file, consumers, dist = sys.argv[1:4]
     
     hit_rate = get_pg_json('''
         SELECT 
@@ -148,9 +148,8 @@ def main():
     
     scenario_data = {
         "escenario": {
-            "memoria": mem,
+            "consumidores": int(consumers),
             "distribucion": dist,
-            "politica": pol
         },
         "resultados_tarea1": {
             "hit_rate": hit_rate,

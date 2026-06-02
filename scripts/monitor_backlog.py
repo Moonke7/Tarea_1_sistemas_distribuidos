@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-monitor_backlog.py — Standalone script
-
-Muestrea el lag de Kafka para geo-queries y geo-retry periódicamente
-e inserta los valores en la tabla backlog_samples de Postgres.
-
-Uso:
-    python scripts/monitor_backlog.py
-
-Requerimientos:
-    pip install kafka-python psycopg2-binary
-"""
 
 import os
 import time
@@ -18,13 +6,13 @@ import psycopg2
 from kafka import KafkaAdminClient, KafkaConsumer, TopicPartition
 from kafka.errors import NoBrokersAvailable
 
-KAFKA_BOOTSTRAP_SERVERS = os.environ.get(
-    "KAFKA_BOOTSTRAP_SERVERS", "localhost:29092"
-)
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 KAFKA_TOPIC_QUERIES = "geo-queries"
 KAFKA_TOPIC_RETRY = "geo-retry"
 KAFKA_CONSUMER_GROUP = "geo-consumers"
 SAMPLE_INTERVAL = int(os.environ.get("SAMPLE_INTERVAL", 5))
+RETRY_ATTEMPTS = 15
+RETRY_DELAY = 3
 
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = int(os.environ.get("POSTGRES_PORT", 5432))
@@ -52,36 +40,56 @@ def get_partitions(consumer, topics):
     return partitions
 
 
+def try_connect_kafka():
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        try:
+            admin_client = KafkaAdminClient(
+                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+                client_id="monitor-backlog",
+            )
+            temp_consumer = KafkaConsumer(
+                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            )
+            return admin_client, temp_consumer
+        except NoBrokersAvailable:
+            if attempt < RETRY_ATTEMPTS:
+                print(
+                    f"[MONITOR] Kafka no listo (intento {attempt}/{RETRY_ATTEMPTS}), "
+                    f"reintentando en {RETRY_DELAY}s..."
+                )
+                time.sleep(RETRY_DELAY)
+            else:
+                print("[MONITOR] Error: Kafka no respondió tras todos los intentos")
+                return None, None
+
+
 def main():
     print("[MONITOR] Iniciando monitoreo de backlog...")
     print(f"[MONITOR] Kafka: {KAFKA_BOOTSTRAP_SERVERS}")
     print(f"[MONITOR] Topics: {TOPICS}")
     print(f"[MONITOR] Intervalo: {SAMPLE_INTERVAL}s")
     print(f"[MONITOR] Postgres: {POSTGRES_HOST}:{POSTGRES_PORT}")
+    print(f"[MONITOR] Reintentos: {RETRY_ATTEMPTS} x {RETRY_DELAY}s")
 
-    time.sleep(2)
-
-    try:
-        admin_client = KafkaAdminClient(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            client_id="monitor-backlog",
-        )
-    except NoBrokersAvailable:
-        print("[MONITOR] Error: No se pudo conectar a Kafka")
+    admin_client, temp_consumer = try_connect_kafka()
+    if admin_client is None:
         return
 
-    try:
-        temp_consumer = KafkaConsumer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    # Los topics pueden no existir todavía si Kafka acaba de arrancar.
+    # Reintentar hasta que aparezcan particiones.
+    partitions = []
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        partitions = get_partitions(temp_consumer, TOPICS)
+        if partitions:
+            break
+        print(
+            f"[MONITOR] No se encontraron particiones (intento {attempt}/{RETRY_ATTEMPTS}), "
+            f"reintentando en {RETRY_DELAY}s..."
         )
-    except NoBrokersAvailable:
-        print("[MONITOR] Error: No se pudo conectar a Kafka (temp consumer)")
-        admin_client.close()
-        return
+        time.sleep(RETRY_DELAY)
 
-    partitions = get_partitions(temp_consumer, TOPICS)
     if not partitions:
-        print("[MONITOR] No se encontraron particiones disponibles")
+        print("[MONITOR] Topics nunca aparecieron. Saliendo.")
         temp_consumer.close()
         admin_client.close()
         return

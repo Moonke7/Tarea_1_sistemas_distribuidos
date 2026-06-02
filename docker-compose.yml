@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   kafka:
     image: apache/kafka:3.7.0
@@ -86,8 +84,8 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - POSTGRES_HOST=metrics
-      - MAX_CONCURRENT=${MAX_CONCURRENT:-3}
-      - FAILURE_RATE=${FAILURE_RATE:-0.0}
+      - MAX_CONCURRENT=${MAX_CONCURRENT:-20}
+      - FAILURE_RATE=${FAILURE_RATE:-0.3}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - KAFKA_TOPIC_QUERIES=geo-queries
       - KAFKA_TOPIC_RETRY=geo-retry
