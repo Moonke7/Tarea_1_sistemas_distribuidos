@@ -1,11 +1,16 @@
 import os
 import time
-import requests
+import uuid
+import json
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
+from kafka import KafkaProducer
 from dist_uniforme import generar_query_uniforme
 from dist_zipf import generar_query_zipf
 
-CACHE_URL = os.environ.get("CACHE_URL", "http://cache:5000/query")
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+KAFKA_TOPIC_QUERIES = os.environ.get("KAFKA_TOPIC_QUERIES", "geo-queries")
+FLUSH_PER_MESSAGE = os.environ.get("FLUSH_PER_MESSAGE", "true").lower() == "true"
 
 
 def generar_cache_key(query_data):
@@ -23,7 +28,7 @@ def generar_cache_key(query_data):
     return "unknown_key"
 
 
-def ejecutar_consulta(i, total, dist_type):
+def ejecutar_consulta(i, total, dist_type, producer):
     try:
         if dist_type == "ZIPF":
             query = generar_query_zipf()
@@ -31,25 +36,25 @@ def ejecutar_consulta(i, total, dist_type):
             query = generar_query_uniforme()
 
         cache_key = generar_cache_key(query)
-        payload = {"cache_key": cache_key, "query_data": query}
+        
+        message = {
+            "message_id": str(uuid.uuid4()),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "retry_count": 0,
+            "payload": {
+                "cache_key": cache_key,
+                "query_data": query
+            }
+        }
 
-        start_time = time.time()
-        res = requests.post(CACHE_URL, json=payload, timeout=10)
-        latency = (time.time() - start_time) * 1000
+        producer.send(KAFKA_TOPIC_QUERIES, value=message)
+        if FLUSH_PER_MESSAGE:
+            producer.flush()
+        
+        print(f"[TRÁFICO {i}/{total}] Mensaje enviado a Kafka: {message['message_id']}")
 
-        if res.status_code == 200:
-            data = res.json()
-            print(
-                "[TRÁFICO %s/%s] Respuesta en %s ms (fuente: %s)"
-                % (i, total, latency, data.get("source"))
-            )
-        else:
-            print("error al enviar trafico a cache, ", res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        print(f"[ERROR {i}/{total}] No se pudo contactar a {CACHE_URL}: {e}")
     except Exception as e:
-        print(f"[ERROR {i}/{total}] Error inesperado en tráfico: {e}")
+        print(f"[ERROR {i}/{total}] Error al enviar mensaje a Kafka: {e}")
 
 
 def main():
@@ -58,15 +63,23 @@ def main():
 
     time.sleep(10)
 
+    producer = KafkaProducer(
+        bootstrap_servers=[KAFKA_BOOTSTRAP_SERVERS],
+        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+    )
+
     TOTAL_CONSULTAS = 20000
     start_global = time.time()
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for i in range(1, TOTAL_CONSULTAS + 1):
-            executor.submit(ejecutar_consulta, i, TOTAL_CONSULTAS, dist_type)
+            executor.submit(ejecutar_consulta, i, TOTAL_CONSULTAS, dist_type, producer)
 
     total_time = time.time() - start_global
     print("Tiempo total de ejecucion: ", total_time)
+    
+    producer.flush()
+    producer.close()
 
 
 if __name__ == "__main__":

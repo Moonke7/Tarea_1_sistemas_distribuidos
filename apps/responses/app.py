@@ -1,8 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import redis
 import os
 import json
+import random
+import threading
 import pandas as pd
 import numpy as np
 
@@ -10,6 +13,10 @@ app = FastAPI()
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT", 3))
+FAILURE_RATE = float(os.environ.get("FAILURE_RATE", 0.0))
+
+semaphore = threading.Semaphore(MAX_CONCURRENT)
 
 redis_client = redis.Redis(
     host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
@@ -108,70 +115,86 @@ def get_density(zone_id, conf_min):
 
 @app.post("/process")
 def process_query(payload: QueryPayload):
-    cache_key = payload.cache_key
-    query_data = payload.query_data
-    q_type = query_data.get("query")
-    zone_id = query_data.get("zone_id")
-    conf_min = query_data.get("confidence_min", 0.0)
-
+    if not semaphore.acquire(blocking=False):
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Service unavailable: max concurrent requests reached"}
+        )
+    
     try:
-        if q_type == "Q1":
-            resultado = {"count": len(get_zona(zone_id, conf_min))}
+        if random.random() < FAILURE_RATE:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Simulated failure"}
+            )
+        
+        cache_key = payload.cache_key
+        query_data = payload.query_data
+        q_type = query_data.get("query")
+        zone_id = query_data.get("zone_id")
+        conf_min = query_data.get("confidence_min", 0.0)
 
-        elif q_type == "Q2":
-            subset = get_zona(zone_id, conf_min)
-            resultado = {
-                "avg_area": (
-                    float(subset["area_in_meters"].mean()) if len(subset) > 0 else 0.0
-                ),
-                "total_area": (
-                    float(subset["area_in_meters"].sum()) if len(subset) > 0 else 0.0
-                ),
-                "n": len(subset),
-            }
+        try:
+            if q_type == "Q1":
+                resultado = {"count": len(get_zona(zone_id, conf_min))}
 
-        elif q_type == "Q3":
-            resultado = {"density": float(get_density(zone_id, conf_min))}
+            elif q_type == "Q2":
+                subset = get_zona(zone_id, conf_min)
+                resultado = {
+                    "avg_area": (
+                        float(subset["area_in_meters"].mean()) if len(subset) > 0 else 0.0
+                    ),
+                    "total_area": (
+                        float(subset["area_in_meters"].sum()) if len(subset) > 0 else 0.0
+                    ),
+                    "n": len(subset),
+                }
 
-        elif q_type == "Q4":
-            zone_a = query_data.get("zone_a")
-            zone_b = query_data.get("zone_b")
-            den_a = get_density(zone_a, conf_min)
-            den_b = get_density(zone_b, conf_min)
-            resultado = {
-                "zone_a": float(den_a),
-                "zone_b": float(den_b),
-                "winner": zone_a if den_a >= den_b else zone_b,
-            }
+            elif q_type == "Q3":
+                resultado = {"density": float(get_density(zone_id, conf_min))}
 
-        elif q_type == "Q5":
-            bins = int(query_data.get("bins", 5))
-            scores = df.query("zone_id == @zone_id")["confidence"]
-            hist, edges = np.histogram(scores, bins=bins, range=(0.0, 1.0))
-            resultado = {
-                "buckets": [
-                    {
-                        "bucket": i + 1,
-                        "min": float(edges[i]),
-                        "max": float(edges[i + 1]),
-                        "count": int(hist[i]),
-                    }
-                    for i in range(bins)
-                ]
-            }
+            elif q_type == "Q4":
+                zone_a = query_data.get("zone_a")
+                zone_b = query_data.get("zone_b")
+                den_a = get_density(zone_a, conf_min)
+                den_b = get_density(zone_b, conf_min)
+                resultado = {
+                    "zone_a": float(den_a),
+                    "zone_b": float(den_b),
+                    "winner": zone_a if den_a >= den_b else zone_b,
+                }
 
-        else:
-            resultado = {"error": "Tipo desconocido"}
+            elif q_type == "Q5":
+                bins = int(query_data.get("bins", 5))
+                scores = df.query("zone_id == @zone_id")["confidence"]
+                hist, edges = np.histogram(scores, bins=bins, range=(0.0, 1.0))
+                resultado = {
+                    "buckets": [
+                        {
+                            "bucket": i + 1,
+                            "min": float(edges[i]),
+                            "max": float(edges[i + 1]),
+                            "count": int(hist[i]),
+                        }
+                        for i in range(bins)
+                    ]
+                }
 
-    except Exception as e:
-        print("Error procesando query", e)
-        resultado = {"error": str(e)}
+            else:
+                resultado = {"error": "Tipo desconocido"}
 
-    ttl = 90
-    resultado = increase_size(resultado, target_kb=200)
-    redis_client.setex(cache_key, ttl, json.dumps(resultado))
+        except Exception as e:
+            print("Error procesando query", e)
+            resultado = {"error": str(e)}
 
-    return resultado
+        ttl = 90
+        resultado = increase_size(resultado, target_kb=200)
+        redis_client.setex(cache_key, ttl, json.dumps(resultado))
+
+        return resultado
+    
+    finally:
+        semaphore.release()
 
 
 if __name__ == "__main__":

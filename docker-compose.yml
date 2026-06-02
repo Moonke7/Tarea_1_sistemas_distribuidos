@@ -1,21 +1,55 @@
 version: "3.8"
 
 services:
+  kafka:
+    image: apache/kafka:3.7.0
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    networks:
+      - app-network
+
   trafic:
     build:
       context: ./apps/trafic
       dockerfile: Dockerfile
     environment:
-      - DISTRIBUTION=${DISTRIBUTION:-ZIPF} # ZIPF o UNIFORME
-      - CACHE_URL=http://cache:5000/query
+      - DISTRIBUTION=${DISTRIBUTION:-ZIPF}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC_QUERIES=geo-queries
+      - KAFKA_TOPIC_RETRY=geo-retry
+      - KAFKA_TOPIC_DLQ=geo-dlq
+      - KAFKA_CONSUMER_GROUP=geo-consumers
+      - KAFKA_PARTITIONS=1
+      - MAX_RETRIES=3
+      - FLUSH_PER_MESSAGE=${FLUSH_PER_MESSAGE:-true}
     depends_on:
-      - cache
+      - kafka
+    networks:
+      - app-network
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     command: redis-server --maxmemory ${REDIS_MAXMEMORY:-50mb} --maxmemory-policy ${REDIS_POLICY:-allkeys-lfu}
+    networks:
+      - app-network
 
   cache:
     build:
@@ -28,10 +62,19 @@ services:
       - REDIS_PORT=6379
       - RESPONSES_URL=http://responses:5000/process
       - POSTGRES_HOST=metrics
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC_QUERIES=geo-queries
+      - KAFKA_TOPIC_RETRY=geo-retry
+      - KAFKA_TOPIC_DLQ=geo-dlq
+      - KAFKA_CONSUMER_GROUP=geo-consumers
+      - KAFKA_PARTITIONS=1
+      - MAX_RETRIES=3
     depends_on:
       - redis
       - responses
       - metrics
+    networks:
+      - app-network
 
   responses:
     build:
@@ -43,11 +86,46 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - POSTGRES_HOST=metrics
+      - MAX_CONCURRENT=${MAX_CONCURRENT:-3}
+      - FAILURE_RATE=${FAILURE_RATE:-0.0}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC_QUERIES=geo-queries
+      - KAFKA_TOPIC_RETRY=geo-retry
+      - KAFKA_TOPIC_DLQ=geo-dlq
+      - KAFKA_CONSUMER_GROUP=geo-consumers
+      - KAFKA_PARTITIONS=1
+      - MAX_RETRIES=3
     volumes:
       - ./dataset_f.csv:/app/dataset_f.csv
     depends_on:
       - redis
       - metrics
+    networks:
+      - app-network
+
+  consumer:
+    build:
+      context: ./apps/consumer
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC_QUERIES=geo-queries
+      - KAFKA_TOPIC_RETRY=geo-retry
+      - KAFKA_TOPIC_DLQ=geo-dlq
+      - KAFKA_CONSUMER_GROUP=geo-consumers
+      - KAFKA_PARTITIONS=1
+      - MAX_RETRIES=3
+      - MAX_REQUESTS_PER_SECOND=${MAX_REQUESTS_PER_SECOND:-10}
+      - POSTGRES_HOST=metrics
+      - CACHE_URL=http://cache:5000/query
+      - RESPONSES_URL=http://responses:5000/process
+    depends_on:
+      - kafka
+      - cache
+      - responses
+      - metrics
+    networks:
+      - app-network
 
   metrics:
     image: postgres:15-alpine
@@ -60,6 +138,12 @@ services:
     volumes:
       - metrics_data:/var/lib/postgresql/data
       - ./apps/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
 
 volumes:
   metrics_data:
+
+networks:
+  app-network:
+    driver: bridge
