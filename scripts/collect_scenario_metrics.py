@@ -82,13 +82,77 @@ def main():
         ORDER BY zona
     ''')
     
+    kafka_throughput = get_pg_json('''
+        SELECT 
+            COUNT(*) as total_consultas,
+            SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as exitosas,
+            ROUND(EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp)))::numeric, 2) as tiempo_total_segundos,
+            ROUND((SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) / GREATEST(EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp))), 1))::numeric, 2) as throughput_qps
+        FROM kafka_query_metrics
+    ''')
+    
+    kafka_latency = get_pg_json('''
+        SELECT 
+            PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms) as latencia_p50_ms,
+            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) as latencia_p95_ms
+        FROM kafka_query_metrics
+        WHERE status = 'success'
+    ''')
+    
+    kafka_retry_rate = get_pg_json('''
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN retry_count > 0 THEN 1 ELSE 0 END) as con_reintentos,
+            ROUND((SUM(CASE WHEN retry_count > 0 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as retry_rate_porcentaje
+        FROM kafka_query_metrics
+    ''')
+    
+    kafka_recovery_rate = get_pg_json('''
+        WITH retry_stats AS (
+            SELECT 
+                SUM(CASE WHEN retry_count > 0 THEN 1 ELSE 0 END) as total_reintentos,
+                SUM(CASE WHEN retry_count > 0 AND status = 'success' THEN 1 ELSE 0 END) as recuperados
+            FROM kafka_query_metrics
+        )
+        SELECT 
+            total_reintentos,
+            recuperados,
+            ROUND((recuperados * 100.0 / NULLIF(total_reintentos, 0)), 2) as recovery_rate_porcentaje
+        FROM retry_stats
+    ''')
+    
+    kafka_dlq_rate = get_pg_json('''
+        WITH dlq_stats AS (
+            SELECT 
+                (SELECT COUNT(*) FROM kafka_query_metrics) as total_mensajes,
+                (SELECT COUNT(*) FROM dlq_log) as total_dlq
+        )
+        SELECT 
+            total_mensajes,
+            total_dlq,
+            ROUND((total_dlq * 100.0 / NULLIF(total_mensajes, 0)), 2) as dlq_rate_porcentaje
+        FROM dlq_stats
+    ''')
+    
+    kafka_backlog = get_pg_json('''
+        SELECT 
+            topic,
+            partition,
+            consumer_group,
+            lag,
+            timestamp
+        FROM backlog_samples
+        ORDER BY timestamp DESC
+        LIMIT 1
+    ''')
+    
     scenario_data = {
         "escenario": {
             "memoria": mem,
             "distribucion": dist,
             "politica": pol
         },
-        "resultados": {
+        "resultados_tarea1": {
             "hit_rate": hit_rate,
             "throughput": throughput,
             "latencia": latency,
@@ -99,6 +163,14 @@ def main():
             },
             "efficiency": efficiency,
             "zonas": zones
+        },
+        "resultados_tarea2": {
+            "throughput": kafka_throughput,
+            "latencia": kafka_latency,
+            "retry_rate": kafka_retry_rate,
+            "recovery_rate": kafka_recovery_rate,
+            "dlq_rate": kafka_dlq_rate,
+            "backlog": kafka_backlog
         }
     }
     
