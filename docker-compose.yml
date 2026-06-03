@@ -126,6 +126,24 @@ services:
     networks:
       - app-network
 
+  monitor:
+    build:
+      context: ./apps/monitor
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC_QUERIES=geo-queries
+      - KAFKA_TOPIC_RETRY=geo-retry
+      - KAFKA_CONSUMER_GROUP=geo-consumers
+      - POSTGRES_HOST=metrics
+      - POSTGRES_PORT=5432
+      - SAMPLE_INTERVAL=5
+    depends_on:
+      - kafka
+      - metrics
+    networks:
+      - app-network
+
   metrics:
     image: postgres:15-alpine
     environment:
