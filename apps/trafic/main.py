@@ -64,7 +64,7 @@ def main():
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
-    TOTAL_CONSULTAS = 1000
+    TOTAL_CONSULTAS = 500
     start_global = time.time()
 
     for i in range(1, TOTAL_CONSULTAS + 1):
