@@ -6,12 +6,11 @@ import random
 import requests
 import psycopg2
 from kafka import KafkaConsumer, KafkaProducer
-from kafka.errors import NoBrokersAvailable
 
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", 3))
 MAX_REQUESTS_PER_SECOND = int(os.environ.get("MAX_REQUESTS_PER_SECOND", 0))
-IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 15))
+IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 60))
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "metrics")
 CACHE_URL = os.environ.get("CACHE_URL", "http://cache:5000/query")
 RESPONSES_URL = os.environ.get("RESPONSES_URL", "http://responses:5000/process")
@@ -116,11 +115,11 @@ def process_message(msg_value, msg_topic):
 
     try:
         if msg_topic == KAFKA_TOPIC_QUERIES:
-            print("✅ Mensaje desde queries")
+            print("🔥 Mensaje desde queries")
             source = "cache"
             res = requests.post(CACHE_URL, json=payload, timeout=10)
         else:
-            print("❌ Mensaje desde retry")
+            print("⚠️ Mensaje desde retry")
             source = "retry-direct"
             res = requests.post(RESPONSES_URL, json=payload, timeout=10)
 
@@ -185,7 +184,7 @@ def process_message(msg_value, msg_topic):
             }
             producer.send(KAFKA_TOPIC_RETRY, value=retry_msg)
             producer.flush()
-            print(f"❌❌ RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
+            print(f"🧊 RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
 
         return False
 
@@ -203,30 +202,21 @@ def main():
 
     time.sleep(15)
 
-    try:
-        consumer = KafkaConsumer(
-            KAFKA_TOPIC_QUERIES,
-            KAFKA_TOPIC_RETRY,
-            group_id=KAFKA_CONSUMER_GROUP,
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            max_poll_records=1,
-            enable_auto_commit=True,
-            auto_offset_reset="earliest",
-            value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        )
-    except NoBrokersAvailable:
-        print("Error: No se pudo conectar a Kafka")
-        return
+    consumer = KafkaConsumer(
+        KAFKA_TOPIC_QUERIES,
+        KAFKA_TOPIC_RETRY,
+        group_id=KAFKA_CONSUMER_GROUP,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        max_poll_records=1,
+        enable_auto_commit=True,
+        auto_offset_reset="earliest",
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    )
 
-    try:
-        producer = KafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            value_serializer=lambda m: json.dumps(m).encode("utf-8"),
-        )
-    except NoBrokersAvailable:
-        print("Error: No se pudo conectar a Kafka")
-        consumer.close()
-        return
+    producer = KafkaProducer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        value_serializer=lambda m: json.dumps(m).encode("utf-8"),
+    )
 
     print("Conectado... esperando mensajes...")
 
