@@ -5,39 +5,40 @@
   },
   "resultados": {
     "throughput": {
-      "total_consultas": 823,
-      "exitosas": 433,
-      "tiempo_total_segundos": 14.22,
-      "throughput_qps": 30.45
+      "total_consultas": 2623,
+      "exitosas": 1239,
+      "tiempo_total_segundos": 37.5,
+      "throughput_qps": 33.04
     },
     "latencia": {
-      "latencia_p50_ms": 24.187088012695312,
-      "latencia_p95_ms": 72.96504974365227
+      "latencia_p50_ms": 78.26924324035645,
+      "latencia_p95_ms": 164.38386440277097
     },
     "retry_rate": {
-      "total": 823,
-      "con_reintentos": 343,
-      "retry_rate_porcentaje": 41.68
+      "total": 2623,
+      "con_reintentos": 1123,
+      "retry_rate_porcentaje": 42.81
     },
     "recovery_rate": {
-      "total_reintentos": 343,
-      "recuperados": 179,
-      "recovery_rate_porcentaje": 52.19
+      "total_reintentos": 1123,
+      "recuperados": 430,
+      "recovery_rate_porcentaje": 38.29
     },
     "dlq_rate": {
-      "total_mensajes": 823,
-      "total_dlq": 47,
-      "dlq_rate_porcentaje": 5.71
+      "total_mensajes": 2623,
+      "total_dlq": 261,
+      "dlq_rate_porcentaje": 9.95
     },
     "backlog_size": {
-      "peak_lag": 480,
-      "last_sample_ts": "2026-06-03T02:37:47.369235",
-      "total_samples": 17
+      "peak_lag_queries": 183,
+      "peak_lag_retry": 155,
+      "last_sample_ts": "2026-06-03T04:40:36.301165",
+      "total_samples": 23
     },
     "recovery_time": {
-      "restore_timestamp": "2026-06-03T02:36:21.705497",
-      "drained_timestamp": "2026-06-03T02:36:46.449435",
-      "recovery_time_seconds": 24.74
+      "restore_timestamp": "2026-06-03T04:38:32.207883",
+      "drained_timestamp": "2026-06-03T04:38:45.459053",
+      "recovery_time_seconds": 13.25
     }
   }
 }
