@@ -73,16 +73,24 @@ def main():
     ''')
     
     kafka_backlog_size = get_pg_json('''
-        WITH total_lag_per_ts AS (
-            SELECT timestamp, SUM(lag) as total_lag
+        WITH lag_per_topic_ts AS (
+            SELECT timestamp, topic, SUM(lag) as topic_lag
             FROM backlog_samples
-            GROUP BY timestamp
+            GROUP BY timestamp, topic
+        ),
+        peak_per_topic AS (
+            SELECT 
+                topic,
+                MAX(topic_lag) as peak_lag
+            FROM lag_per_topic_ts
+            GROUP BY topic
         )
-        SELECT
-            MAX(total_lag) as peak_lag,
-            MAX(timestamp) as last_sample_ts,
-            COUNT(*) as total_samples
-        FROM total_lag_per_ts
+        SELECT 
+            MAX(CASE WHEN topic = 'geo-queries' THEN peak_lag END) as peak_lag_queries,
+            MAX(CASE WHEN topic = 'geo-retry' THEN peak_lag END) as peak_lag_retry,
+            (SELECT MAX(timestamp) FROM backlog_samples) as last_sample_ts,
+            (SELECT COUNT(DISTINCT timestamp) FROM backlog_samples) as total_samples
+        FROM peak_per_topic
     ''')
 
     kafka_recovery_time = get_pg_json('''
