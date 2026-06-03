@@ -49,3 +49,10 @@ CREATE TABLE IF NOT EXISTS consumer_stats (
     messages_failed INT DEFAULT 0,
     avg_latency_ms FLOAT
 );
+
+CREATE TABLE IF NOT EXISTS service_events (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    service VARCHAR(50),
+    event VARCHAR(20)
+);

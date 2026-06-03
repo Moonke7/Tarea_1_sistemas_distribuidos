@@ -6,6 +6,8 @@ import os
 import json
 import random
 import threading
+import time
+import psycopg2
 import pandas as pd
 import numpy as np
 
@@ -15,6 +17,7 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT", 3))
 FAILURE_RATE = float(os.environ.get("FAILURE_RATE", 0.0))
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "metrics")
 
 semaphore = threading.Semaphore(MAX_CONCURRENT)
 
@@ -196,6 +199,33 @@ def process_query(payload: QueryPayload):
     finally:
         semaphore.release()
 
+
+@app.on_event("startup")
+def register_startup_event():
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            conn = psycopg2.connect(
+                host=POSTGRES_HOST,
+                database="metrics_db",
+                user="sistemas_d",
+                password="sistemas_d",
+            )
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO service_events (service, event) VALUES (%s, %s)",
+                ("responses", "up"),
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("[STARTUP] Evento 'up' registrado en service_events")
+            return
+        except Exception as e:
+            print(f"[STARTUP] Intento {attempt}/{max_attempts}: {e}")
+            if attempt < max_attempts:
+                time.sleep(3)
+    print("[STARTUP] Warning: no se pudo registrar evento 'up'")
 
 if __name__ == "__main__":
     import uvicorn
