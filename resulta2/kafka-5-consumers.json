@@ -3,95 +3,41 @@
     "consumidores": 5,
     "distribucion": "zipf"
   },
-  "resultados_tarea1": {
-    "hit_rate": {
-      "hits": 201,
-      "misses": 568,
-      "total": 769,
-      "hit_rate_porcentaje": 26.14
-    },
+  "resultados": {
     "throughput": {
-      "total_consultas": 769,
-      "tiempo_total_segundos": 103.26,
-      "throughput_qps": 7.45
+      "total_consultas": 780,
+      "exitosas": 471,
+      "tiempo_total_segundos": 21.66,
+      "throughput_qps": 21.75
     },
     "latencia": {
-      "latencia_p50_ms": 15.414237976074219,
-      "latencia_p95_ms": 27.78406143188476
-    },
-    "eviction": {
-      "evicted_keys": 476,
-      "expired_keys": 58,
-      "evictions_per_min": 168.99
-    },
-    "efficiency": {
-      "cache_efficiency": -13.31
-    },
-    "zonas": [
-      {
-        "zona": "Z1",
-        "hits": 112,
-        "total": 331,
-        "hit_rate_porcentaje": 33.84
-      },
-      {
-        "zona": "Z2",
-        "hits": 51,
-        "total": 201,
-        "hit_rate_porcentaje": 25.37
-      },
-      {
-        "zona": "Z3",
-        "hits": 19,
-        "total": 120,
-        "hit_rate_porcentaje": 15.83
-      },
-      {
-        "zona": "Z4",
-        "hits": 15,
-        "total": 78,
-        "hit_rate_porcentaje": 19.23
-      },
-      {
-        "zona": "Z5",
-        "hits": 4,
-        "total": 39,
-        "hit_rate_porcentaje": 10.26
-      }
-    ]
-  },
-  "resultados_tarea2": {
-    "throughput": {
-      "total_consultas": 1296,
-      "exitosas": 987,
-      "tiempo_total_segundos": 133.93,
-      "throughput_qps": 7.37
-    },
-    "latencia": {
-      "latencia_p50_ms": 20.1263427734375,
-      "latencia_p95_ms": 34.281992912292466
+      "latencia_p50_ms": 21.484851837158203,
+      "latencia_p95_ms": 61.05101108551018
     },
     "retry_rate": {
-      "total": 1296,
-      "con_reintentos": 296,
-      "retry_rate_porcentaje": 22.84
+      "total": 780,
+      "con_reintentos": 281,
+      "retry_rate_porcentaje": 36.03
     },
     "recovery_rate": {
-      "total_reintentos": 296,
-      "recuperados": 218,
-      "recovery_rate_porcentaje": 73.65
+      "total_reintentos": 281,
+      "recuperados": 184,
+      "recovery_rate_porcentaje": 65.48
     },
     "dlq_rate": {
-      "total_mensajes": 1296,
-      "total_dlq": 13,
-      "dlq_rate_porcentaje": 1.0
+      "total_mensajes": 780,
+      "total_dlq": 28,
+      "dlq_rate_porcentaje": 3.59
     },
-    "backlog": {
-      "topic": "geo-queries",
-      "partition": 0,
-      "consumer_group": "geo-consumers",
-      "lag": 0,
-      "timestamp": "2026-06-02T02:36:10.984861"
+    "backlog_size": {
+      "peak_lag": 499,
+      "last_sample_ts": "2026-06-03T02:36:03.24863",
+      "total_samples": 18
+    },
+    "recovery_time": {
+      "restore_timestamp": "2026-06-03T02:35:15.347567",
+      "drained_timestamp": "2026-06-03T02:35:17.469153",
+      "recovery_time_seconds": 2.12
     }
   }
 }
