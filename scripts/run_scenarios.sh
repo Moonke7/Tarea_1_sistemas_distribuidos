@@ -34,6 +34,7 @@ run_scenario() {
     echo "[SCENARIO] Levantando servicios con $scale consumidor(es)..."
     export DISTRIBUTION=$DISTRIBUTION
     export FAILURE_RATE=0.3
+    export KAFKA_PARTITIONS=$scale
     docker compose up --build -d --scale consumer="$scale"
 
     echo "[SCENARIO] Iniciando monitor de backlog..."
@@ -74,6 +75,9 @@ run_scenario "kafka-1-consumer" "1" "Kafka"
 
 # Escenario 2: 5 consumidores
 run_scenario "kafka-5-consumers" "5" "Kafka"
+
+# Escenario 3: 10 consumidores
+run_scenario "kafka-10-consumers" "10" "Kafka"
 
 
 echo ""
