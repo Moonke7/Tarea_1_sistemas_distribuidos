@@ -5,6 +5,7 @@ import uuid
 import random
 import requests
 import psycopg2
+from datetime import datetime, timezone
 from kafka import KafkaConsumer, KafkaProducer
 
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
@@ -111,7 +112,11 @@ def process_message(msg_value, msg_topic):
 
     cache_key, query_data, query_type, zone_id = extract_query_info(payload)
 
-    start_time = time.time()
+    try:
+        created_at_dt = datetime.fromisoformat(created_at)
+        start_time = created_at_dt.timestamp()
+    except (ValueError, TypeError):
+        start_time = time.time()
 
     try:
         if msg_topic == KAFKA_TOPIC_QUERIES:

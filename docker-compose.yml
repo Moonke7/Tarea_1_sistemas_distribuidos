@@ -37,6 +37,12 @@ services:
       - KAFKA_PARTITIONS=1
       - MAX_RETRIES=3
       - FLUSH_PER_MESSAGE=${FLUSH_PER_MESSAGE:-true}
+      - BASE_SLEEP=${BASE_SLEEP:-0.02}
+      - SPIKE_MODE=${SPIKE_MODE:-false}
+      - SPIKE_START_DELAY=${SPIKE_START_DELAY:-15}
+      - SPIKE_DURATION=${SPIKE_DURATION:-5}
+      - SPIKE_SLEEP=${SPIKE_SLEEP:-0.002}
+      - SPIKE_FLUSH_DISABLE=${SPIKE_FLUSH_DISABLE:-true}
     depends_on:
       - kafka
     networks:

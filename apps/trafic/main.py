@@ -28,7 +28,7 @@ def generar_cache_key(query_data):
     return "unknown_key"
 
 
-def ejecutar_consulta(i, total, dist_type, producer):
+def ejecutar_consulta(i, total, dist_type, producer, do_flush=True):
     try:
         if dist_type == "ZIPF":
             query = generar_query_zipf()
@@ -45,7 +45,7 @@ def ejecutar_consulta(i, total, dist_type, producer):
         }
 
         producer.send(KAFKA_TOPIC_QUERIES, value=message)
-        if FLUSH_PER_MESSAGE:
+        if do_flush:
             producer.flush()
 
         print(f"[TRÁFICO {i}/{total}] Mensaje enviado a Kafka: {message['message_id']}")
@@ -57,6 +57,19 @@ def ejecutar_consulta(i, total, dist_type, producer):
 def main():
     dist_type = os.environ.get("DISTRIBUTION", "UNIFORME").upper()
 
+    TOTAL_CONSULTAS = 1500
+    BASE_SLEEP = float(os.environ.get("BASE_SLEEP", 0.02))
+    SPIKE_MODE = os.environ.get("SPIKE_MODE", "false").lower() == "true"
+    SPIKE_START_DELAY = float(os.environ.get("SPIKE_START_DELAY", 15))
+    SPIKE_DURATION = float(os.environ.get("SPIKE_DURATION", 10))
+    SPIKE_SLEEP = float(os.environ.get("SPIKE_SLEEP", 0.002))
+    SPIKE_FLUSH_DISABLE = os.environ.get("SPIKE_FLUSH_DISABLE", "true").lower() == "true"
+
+    print(f"[TRÁFICO] TOTAL_CONSULTAS={TOTAL_CONSULTAS}, BASE_SLEEP={BASE_SLEEP}")
+    print(f"[TRÁFICO] SPIKE_MODE={SPIKE_MODE}, SPIKE_START_DELAY={SPIKE_START_DELAY}s, "
+          f"SPIKE_DURATION={SPIKE_DURATION}s, SPIKE_SLEEP={SPIKE_SLEEP}s, "
+          f"SPIKE_FLUSH_DISABLE={SPIKE_FLUSH_DISABLE}")
+
     time.sleep(20)
 
     producer = KafkaProducer(
@@ -64,12 +77,20 @@ def main():
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
-    TOTAL_CONSULTAS = 1500
     start_global = time.time()
 
     for i in range(1, TOTAL_CONSULTAS + 1):
-        ejecutar_consulta(i, TOTAL_CONSULTAS, dist_type, producer)
-        time.sleep(0.02)
+        elapsed = time.time() - start_global
+        in_spike = SPIKE_MODE and SPIKE_START_DELAY <= elapsed < SPIKE_START_DELAY + SPIKE_DURATION
+        do_flush = FLUSH_PER_MESSAGE and not (in_spike and SPIKE_FLUSH_DISABLE)
+
+        ejecutar_consulta(i, TOTAL_CONSULTAS, dist_type, producer, do_flush=do_flush)
+
+        if in_spike:
+            current_sleep = SPIKE_SLEEP
+        else:
+            current_sleep = BASE_SLEEP
+        time.sleep(current_sleep)
 
     total_time = time.time() - start_global
     print("Tiempo total de ejecucion: ", total_time)

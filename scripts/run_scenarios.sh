@@ -130,6 +130,22 @@ run_failure_scenario() {
 }
 
 
+run_spike_scenario() {
+    local name="$1"
+    local scale="$2"
+    local description="$3"
+
+    # Exportar variables para el spike
+    export SPIKE_MODE=true
+    export SPIKE_START_DELAY=8
+    export SPIKE_DURATION=10
+    export SPIKE_SLEEP=0
+
+    run_scenario "${name}" "${scale}" "${description}"
+
+    unset SPIKE_MODE SPIKE_START_DELAY SPIKE_DURATION SPIKE_SLEEP
+}
+
 # ─── Ejecución ─────────────────────────────────
 
 # Escenario 4: Recuperación ante falla con 1 consumidor
@@ -150,8 +166,14 @@ run_scenario "kafka-5-consumers" "5" "Kafka"
 # Escenario 3: 10 consumidores
 run_scenario "kafka-10-consumers" "10" "Kafka"
 
+# Escenario 7: Spike de tráfico con 1 consumidor
+#run_spike_scenario "kafka-spike-1-consumer" "1" "Spike de Tráfico + 1 Consumer"
 
+# Escenario 8: Spike de tráfico con 5 consumidores
+#run_spike_scenario "kafka-spike-5-consumers" "5" "Spike de Tráfico + 5 Consumers"
 
+# Escenario 9: Spike de tráfico con 10 consumidores
+#run_spike_scenario "kafka-spike-10-consumers" "10" "Spike de Tráfico + 10 Consumers"
 
 echo ""
 echo "═══════════════════════════════════════════════════"
