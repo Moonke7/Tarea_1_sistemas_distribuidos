@@ -57,18 +57,19 @@ def ejecutar_consulta(i, total, dist_type, producer):
 def main():
     dist_type = os.environ.get("DISTRIBUTION", "UNIFORME").upper()
 
-    time.sleep(10)
+    time.sleep(20)
 
     producer = KafkaProducer(
         bootstrap_servers=[KAFKA_BOOTSTRAP_SERVERS],
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
-    TOTAL_CONSULTAS = 500
+    TOTAL_CONSULTAS = 1500
     start_global = time.time()
 
     for i in range(1, TOTAL_CONSULTAS + 1):
         ejecutar_consulta(i, TOTAL_CONSULTAS, dist_type, producer)
+        time.sleep(0.02)
 
     total_time = time.time() - start_global
     print("Tiempo total de ejecucion: ", total_time)
