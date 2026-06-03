@@ -1,2 +1,8 @@
 # enunciado y ejemplos
 context-files/*
+
+# macOS
+.DS_Store
+
+# logs de ejecución
+logs/
