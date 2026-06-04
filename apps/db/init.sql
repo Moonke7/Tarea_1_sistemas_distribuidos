@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS query_metrics (
     zone_id VARCHAR(10),
     cache_key VARCHAR(255),
     source VARCHAR(20),
-    latency_ms FLOAT
+    latency_ms FLOAT,
+    status VARCHAR(20) DEFAULT 'success'
 );

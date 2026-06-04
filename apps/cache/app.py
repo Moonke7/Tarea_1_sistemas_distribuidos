@@ -24,7 +24,7 @@ class QueryPayload(BaseModel):
     query_data: dict
 
 
-def log_metric(q_type, zone_id, cache_key, source, latency_ms):
+def log_metric(q_type, zone_id, cache_key, source, latency_ms, status="success"):
     try:
         conn = psycopg2.connect(
             host=POSTGRES_HOST,
@@ -35,10 +35,10 @@ def log_metric(q_type, zone_id, cache_key, source, latency_ms):
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO query_metrics (query_type, zone_id, cache_key, source, latency_ms)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO query_metrics (query_type, zone_id, cache_key, source, latency_ms, status)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (q_type, zone_id, cache_key, source, latency_ms),
+            (q_type, zone_id, cache_key, source, latency_ms, status),
         )
         conn.commit()
         cursor.close()
@@ -84,6 +84,10 @@ def handle_query(payload: QueryPayload, background_tasks: BackgroundTasks):
             raise HTTPException(status_code=502, detail="Error en servicio responses")
 
     except requests.exceptions.RequestException as e:
+        zone_id = query_data.get("zone_id", query_data.get("zone_a", ""))
+        latency_ms = (time.time() - start_time) * 1000
+        log_metric(q_type, zone_id, cache_key, "responses", latency_ms, "failed")
+        print(f"❌ FAIL: {q_type} zona {zone_id} - responses no disponible")
         raise HTTPException(status_code=503, detail="Servicio responses no disponible")
 
 

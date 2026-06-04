@@ -2,62 +2,69 @@
   "escenario": {
     "memoria": "50mb",
     "distribucion": "ZIPF",
-    "politica": "allkeys-lfu"
+    "politica": "allkeys-lfu",
+    "tipo": "normal"
   },
   "resultados": {
+    "success_rate": {
+      "total": 1500,
+      "exitosas": 1115,
+      "fallidas": 385,
+      "success_rate_porcentaje": 74.33
+    },
     "hit_rate": {
-      "hits": 5641,
-      "misses": 14359,
-      "total": 20000,
-      "hit_rate_porcentaje": 28.21
+      "hits": 278,
+      "misses": 1222,
+      "total": 1500,
+      "hit_rate_porcentaje": 18.53
     },
     "throughput": {
-      "total_consultas": 20000,
-      "tiempo_total_segundos": 121.83,
-      "throughput_qps": 164.17
+      "total_consultas": 1500,
+      "tiempo_total_segundos": 8.85,
+      "throughput_qps": 169.54
     },
     "latencia": {
-      "latencia_p50_ms": 117.61331558227539,
-      "latencia_p95_ms": 189.59343433380124
+      "latencia_p50_ms": 105.18670082092285,
+      "latencia_p95_ms": 189.9978399276733
     },
     "eviction": {
-      "evicted_keys": 14043,
+      "evicted_keys": 606,
       "expired_keys": 0,
-      "evictions_per_min": 6287.91
+      "evictions_per_min": 1652.73
     },
     "efficiency": {
-      "cache_efficiency": -97.78
+      "cache_efficiency": -92.29
     },
     "zonas": [
       {
         "zona": "Z1",
-        "hits": 3153,
-        "total": 8534,
-        "hit_rate_porcentaje": 36.95
+        "hits": 153,
+        "total": 637,
+        "hit_rate_porcentaje": 24.02
       },
       {
         "zona": "Z2",
-        "hits": 1368,
-        "total": 5091,
-        "hit_rate_porcentaje": 26.87
+        "hits": 69,
+        "total": 385,
+        "hit_rate_porcentaje": 17.92
       },
       {
         "zona": "Z3",
-        "hits": 730,
-        "total": 3184,
-        "hit_rate_porcentaje": 22.93
+        "hits": 30,
+        "total": 231,
+        "hit_rate_porcentaje": 12.99
       },
       {
         "zona": "Z4",
-        "hits": 252,
-        "total": 1967,
-        "hit_rate_porcentaje": 12.81
+        "hits": 15,
+        "total": 159,
+        "hit_rate_porcentaje": 9.43
       },
       {
         "zona": "Z5",
-        "hits": 138,
-        "total": 1224,
-        "hit_rate_porcentaje": 11.27
+        "hits": 11,
+        "total": 88,
+        "hit_rate_porcentaje": 12.5
       }
     ]
   }

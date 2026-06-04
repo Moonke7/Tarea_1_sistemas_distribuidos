@@ -17,11 +17,12 @@ def get_pg_json_agg(query):
     return json.loads(res) if res else []
 
 def main():
-    if len(sys.argv) != 5:
-        print("Uso: collect_scenario_metrics.py <file> <mem> <dist> <pol>")
+    if len(sys.argv) < 5:
+        print("Uso: collect_scenario_metrics.py <file> <mem> <dist> <pol> [tipo]")
         sys.exit(1)
         
     out_file, mem, dist, pol = sys.argv[1:5]
+    tipo = sys.argv[5] if len(sys.argv) > 5 else "normal"
     
     hit_rate = get_pg_json('''
         SELECT 
@@ -82,13 +83,24 @@ def main():
         ORDER BY zona
     ''')
     
+    success_rate = get_pg_json('''
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as exitosas,
+            SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as fallidas,
+            ROUND((SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as success_rate_porcentaje
+        FROM query_metrics
+    ''')
+    
     scenario_data = {
         "escenario": {
             "memoria": mem,
             "distribucion": dist,
-            "politica": pol
+            "politica": pol,
+            "tipo": tipo
         },
         "resultados": {
+            "success_rate": success_rate,
             "hit_rate": hit_rate,
             "throughput": throughput,
             "latencia": latency,

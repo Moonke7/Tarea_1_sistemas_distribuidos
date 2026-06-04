@@ -6,6 +6,7 @@ from dist_uniforme import generar_query_uniforme
 from dist_zipf import generar_query_zipf
 
 CACHE_URL = os.environ.get("CACHE_URL", "http://cache:5000/query")
+REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", 10))
 
 
 def generar_cache_key(query_data):
@@ -34,7 +35,7 @@ def ejecutar_consulta(i, total, dist_type):
         payload = {"cache_key": cache_key, "query_data": query}
 
         start_time = time.time()
-        res = requests.post(CACHE_URL, json=payload, timeout=10)
+        res = requests.post(CACHE_URL, json=payload, timeout=REQUEST_TIMEOUT)
         latency = (time.time() - start_time) * 1000
 
         if res.status_code == 200:
@@ -58,7 +59,7 @@ def main():
 
     time.sleep(10)
 
-    TOTAL_CONSULTAS = 20000
+    TOTAL_CONSULTAS = 1500
     start_global = time.time()
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:

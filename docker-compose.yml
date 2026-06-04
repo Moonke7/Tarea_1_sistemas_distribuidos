@@ -8,6 +8,7 @@ services:
     environment:
       - DISTRIBUTION=${DISTRIBUTION:-ZIPF} # ZIPF o UNIFORME
       - CACHE_URL=http://cache:5000/query
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-10}
     depends_on:
       - cache
 

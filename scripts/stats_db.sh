@@ -4,7 +4,17 @@ cd "$(dirname "$0")/.." || exit
 
 echo "📊 --- ESTADÍSTICAS DEL SISTEMA DE DISTRIBUCIÓN --- 📊"
 
-echo -e "\n1️⃣  Hit Rate (Hits / (Hits + Misses)):"
+echo -e "\n1️⃣  Success Rate (Exitosas / Total):"
+docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
+SELECT 
+    COUNT(*) as total,
+    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as exitosas,
+    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as fallidas,
+    ROUND((SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as success_rate_porcentaje
+FROM query_metrics;
+"
+
+echo -e "\n2️⃣  Hit Rate (Hits / (Hits + Misses)):"
 docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
 SELECT 
     SUM(CASE WHEN source = 'cache' THEN 1 ELSE 0 END) as hits,
@@ -14,7 +24,7 @@ SELECT
 FROM query_metrics;
 "
 
-echo -e "\n2️⃣  Throughput (Consultas exitosas / segundo):"
+echo -e "\n3️⃣  Throughput (Consultas exitosas / segundo):"
 docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
 SELECT 
     COUNT(*) as total_consultas,
@@ -23,7 +33,7 @@ SELECT
 FROM query_metrics;
 "
 
-echo -e "\n3️⃣  Latencia p50 / p95 (Percentiles de tiempo de respuesta):"
+echo -e "\n4️⃣  Latencia p50 / p95 (Percentiles de tiempo de respuesta):"
 docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
 SELECT 
     PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms) as latencia_p50_ms,
@@ -31,7 +41,7 @@ SELECT
 FROM query_metrics;
 "
 
-echo -e "\n4️⃣  Eviction Rate (Evictions / minuto en Redis):"
+echo -e "\n5️⃣  Eviction Rate (Evictions / minuto en Redis):"
 # Obtenemos uptime en segundos y evicted keys directamente desde redis
 UPTIME=$(docker compose exec -T redis redis-cli info server | grep uptime_in_seconds | tr -d '\r' | cut -d: -f2)
 EVICTED=$(docker compose exec -T redis redis-cli info stats | grep evicted_keys | tr -d '\r' | cut -d: -f2)
@@ -49,7 +59,7 @@ else
     echo "  No se pudo calcular el Eviction Rate. Verifica que Redis esté corriendo."
 fi
 
-echo -e "\n5️⃣  Cache Efficiency ((hits*t_cache - misses*t_db) / total):"
+echo -e "\n6️⃣  Cache Efficiency ((hits*t_cache - misses*t_db) / total):"
 docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
 WITH stats AS (
     SELECT 
@@ -69,7 +79,7 @@ SELECT
 FROM stats;
 "
 
-echo -e "\n6️⃣  Tasa de hits por zona"
+echo -e "\n7️⃣  Tasa de hits por zona"
 docker compose exec -T metrics psql -U sistemas_d -d metrics_db -c "
 SELECT 
     zone_id as zona,
@@ -82,7 +92,7 @@ GROUP BY zone_id
 ORDER BY zona;
 "
 
-echo -e "\n7️⃣  Uso de Memoria en Caché (Redis):"
+echo -e "\n8️⃣  Uso de Memoria en Caché (Redis):"
 USED_MEM=$(docker compose exec -T redis redis-cli info memory | grep '^used_memory_human:' | tr -d '\r' | cut -d: -f2)
 MAX_MEM=$(docker compose exec -T redis redis-cli info memory | grep '^maxmemory_human:' | tr -d '\r' | cut -d: -f2)
 POLITICA=$(docker compose exec -T redis redis-cli info memory | grep '^maxmemory_policy:' | tr -d '\r' | cut -d: -f2)
