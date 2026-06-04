@@ -15,6 +15,7 @@ IDLE_TIMEOUT_SECONDS = int(os.environ.get("IDLE_TIMEOUT_SECONDS", 60))
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "metrics")
 CACHE_URL = os.environ.get("CACHE_URL", "http://cache:5000/query")
 RESPONSES_URL = os.environ.get("RESPONSES_URL", "http://responses:5000/process")
+ENABLE_RETRIES = os.environ.get("ENABLE_RETRIES", "true").lower() == "true"
 
 KAFKA_TOPIC_QUERIES = "geo-queries"
 KAFKA_TOPIC_RETRY = "geo-retry"
@@ -150,46 +151,61 @@ def process_message(msg_value, msg_topic):
         latency_ms = (time.time() - start_time) * 1000
         error_reason = str(e)
 
-        insert_kafka_metric(
-            message_id,
-            query_type,
-            zone_id,
-            cache_key,
-            CONSUMER_ID,
-            retry_count,
-            source,
-            latency_ms,
-            status="retry",
-            error_reason=error_reason,
-        )
-
-        retry_count += 1
-        if retry_count >= MAX_RETRIES:
-            dlq_data = {
-                "message_id": message_id,
-                "created_at": created_at,
-                "retry_count": retry_count,
-                "payload": payload,
-            }
-            producer.send(KAFKA_TOPIC_DLQ, value=dlq_data)
-            producer.flush()
-            insert_dlq_log(
+        if ENABLE_RETRIES:
+            insert_kafka_metric(
                 message_id,
-                payload,
+                query_type,
+                zone_id,
+                cache_key,
+                CONSUMER_ID,
                 retry_count,
-                f"Max retries ({MAX_RETRIES}) reached: {error_reason}",
+                source,
+                latency_ms,
+                status="retry",
+                error_reason=error_reason,
             )
-            print(f"💀 DLQ: {message_id} " f"despues de: {retry_count} intentos")
+
+            retry_count += 1
+            if retry_count >= MAX_RETRIES:
+                dlq_data = {
+                    "message_id": message_id,
+                    "created_at": created_at,
+                    "retry_count": retry_count,
+                    "payload": payload,
+                }
+                producer.send(KAFKA_TOPIC_DLQ, value=dlq_data)
+                producer.flush()
+                insert_dlq_log(
+                    message_id,
+                    payload,
+                    retry_count,
+                    f"Max retries ({MAX_RETRIES}) reached: {error_reason}",
+                )
+                print(f"💀 DLQ: {message_id} " f"despues de: {retry_count} intentos")
+            else:
+                retry_msg = {
+                    "message_id": message_id,
+                    "created_at": created_at,
+                    "retry_count": retry_count,
+                    "payload": payload,
+                }
+                producer.send(KAFKA_TOPIC_RETRY, value=retry_msg)
+                producer.flush()
+                print(f"🧊 RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
         else:
-            retry_msg = {
-                "message_id": message_id,
-                "created_at": created_at,
-                "retry_count": retry_count,
-                "payload": payload,
-            }
-            producer.send(KAFKA_TOPIC_RETRY, value=retry_msg)
-            producer.flush()
-            print(f"🧊 RETRY {retry_count}/{MAX_RETRIES}: {message_id}")
+            insert_kafka_metric(
+                message_id,
+                query_type,
+                zone_id,
+                cache_key,
+                CONSUMER_ID,
+                retry_count,
+                source,
+                latency_ms,
+                status="failed",
+                error_reason=error_reason,
+            )
+            print(f"❌ FAILED: {message_id} - {error_reason}")
 
         return False
 

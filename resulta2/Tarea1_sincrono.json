@@ -1,0 +1,71 @@
+{
+  "escenario": {
+    "memoria": "50mb",
+    "distribucion": "ZIPF",
+    "politica": "allkeys-lfu",
+    "tipo": "normal"
+  },
+  "resultados": {
+    "success_rate": {
+      "total": 1500,
+      "exitosas": 353,
+      "fallidas": 1147,
+      "success_rate_porcentaje": 23.53
+    },
+    "hit_rate": {
+      "hits": 229,
+      "misses": 1271,
+      "total": 1500,
+      "hit_rate_porcentaje": 15.27
+    },
+    "throughput": {
+      "total_consultas": 1500,
+      "tiempo_total_segundos": 11.61,
+      "throughput_qps": 129.23
+    },
+    "latencia": {
+      "latencia_p50_ms": 7.748007774353027,
+      "latencia_p95_ms": 160.39042472839324
+    },
+    "eviction": {
+      "evicted_keys": 0,
+      "expired_keys": 0,
+      "evictions_per_min": 0.0
+    },
+    "efficiency": {
+      "cache_efficiency": -100.9
+    },
+    "zonas": [
+      {
+        "zona": "Z1",
+        "hits": 112,
+        "total": 637,
+        "hit_rate_porcentaje": 17.58
+      },
+      {
+        "zona": "Z2",
+        "hits": 68,
+        "total": 356,
+        "hit_rate_porcentaje": 19.1
+      },
+      {
+        "zona": "Z3",
+        "hits": 24,
+        "total": 235,
+        "hit_rate_porcentaje": 10.21
+      },
+      {
+        "zona": "Z4",
+        "hits": 9,
+        "total": 149,
+        "hit_rate_porcentaje": 6.04
+      },
+      {
+        "zona": "Z5",
+        "hits": 16,
+        "total": 123,
+        "hit_rate_porcentaje": 13.01
+      }
+    ]
+  }
+}

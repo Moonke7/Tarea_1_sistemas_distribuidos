@@ -1,0 +1,44 @@
+{
+  "escenario": {
+    "consumidores": 10,
+    "distribucion": "zipf"
+  },
+  "resultados": {
+    "throughput": {
+      "total_consultas": 1500,
+      "exitosas": 1002,
+      "tiempo_total_segundos": 37.2,
+      "throughput_qps": 26.93
+    },
+    "latencia": {
+      "latencia_p50_ms": 92.14174747467041,
+      "latencia_p95_ms": 240.41424989700303
+    },
+    "retry_rate": {
+      "total": 1500,
+      "con_reintentos": 0,
+      "retry_rate_porcentaje": 0.0
+    },
+    "recovery_rate": {
+      "total_reintentos": 0,
+      "recuperados": 0,
+      "recovery_rate_porcentaje": null
+    },
+    "dlq_rate": {
+      "total_mensajes": 1500,
+      "total_dlq": 0,
+      "dlq_rate_porcentaje": 0.0
+    },
+    "backlog_size": {
+      "peak_lag_queries": 156,
+      "peak_lag_retry": 0,
+      "last_sample_ts": "2026-06-03T23:17:19.670865",
+      "total_samples": 22
+    },
+    "recovery_time": {
+      "restore_timestamp": "2026-06-03T23:15:20.904316",
+      "drained_timestamp": "2026-06-03T23:15:33.679245",
+      "recovery_time_seconds": 12.77
+    }
+  }
+}

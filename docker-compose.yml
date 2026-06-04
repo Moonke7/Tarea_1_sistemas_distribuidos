@@ -124,6 +124,7 @@ services:
       - POSTGRES_HOST=metrics
       - CACHE_URL=http://cache:5000/query
       - RESPONSES_URL=http://responses:5000/process
+      - ENABLE_RETRIES=${ENABLE_RETRIES:-true}
     depends_on:
       - kafka
       - cache

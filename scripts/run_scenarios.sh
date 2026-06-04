@@ -129,6 +129,55 @@ run_failure_scenario() {
     echo ""
 }
 
+run_no_retry_scenario() {
+    local name="$1"
+    local scale="$2"
+    local description="$3"
+
+    if [ -n "$SCENARIO_FILTER" ] && [ "$SCENARIO_FILTER" != "$name" ]; then
+        return
+    fi
+
+    echo ""
+    echo "═══════════════════════════════════════════════════"
+    echo "  Escenario: $description ($scale consumidores)"
+    echo "═══════════════════════════════════════════════════"
+
+    cleanup
+
+    echo "[SCENARIO] Levantando servicios con $scale consumidor(es) (SIN REINTENTOS)..."
+    export DISTRIBUTION=$DISTRIBUTION
+    export FAILURE_RATE=0.3
+    export KAFKA_PARTITIONS=$scale
+    export ENABLE_RETRIES=false
+    docker compose up --build -d --scale consumer="$scale"
+
+    echo "[SCENARIO] Iniciando monitor de backlog..."
+    docker compose up -d monitor
+
+    echo "[SCENARIO] Mostrando logs del consumidor..."
+    docker compose logs -f consumer &
+    CONSUMER_LOGS_PID=$!
+
+    docker compose wait trafic 2>/dev/null
+    echo "[SCENARIO] Trafic terminó. Esperando que los consumers drenen Kafka..."
+
+    while docker compose ps --status running consumer 2>/dev/null | grep -q "consumer"; do
+        sleep 3
+    done
+    echo "[SCENARIO] Todos los consumers terminaron. Recolectando métricas..."
+
+    kill $CONSUMER_LOGS_PID 2>/dev/null || true
+    docker compose stop monitor
+
+    local outfile="resulta2/${name}.json"
+    echo "[SCENARIO] Recolectando métricas → $outfile"
+    python3 scripts/collect_scenario_metrics.py "$outfile" "$scale" "$(echo "$DISTRIBUTION" | tr '[:upper:]' '[:lower:]')"
+
+    echo "[SCENARIO] Escenario '$name' completado."
+    echo ""
+}
+
 
 run_spike_scenario() {
     local name="$1"
@@ -148,14 +197,24 @@ run_spike_scenario() {
 
 # ─── Ejecución ─────────────────────────────────
 
+# Escenario 10: Sin reintentos con 1 consumidor
+#run_no_retry_scenario "kafka-no-retry-1-consumer" "1" "Sin Reintentos + 1 Consumer"
+
+# Escenario 11: Sin reintentos con 5 consumidores
+#run_no_retry_scenario "kafka-no-retry-5-consumers" "5" "Sin Reintentos + 5 Consumers"
+
+# Escenario 12: Sin reintentos con 10 consumidores
+#run_no_retry_scenario "kafka-no-retry-10-consumers" "10" "Sin Reintentos + 10 Consumers"
+
+
 # Escenario 4: Recuperación ante falla con 1 consumidor
-run_failure_scenario "kafka-failure-1-consumer" "1" "Falla + 1 Consumer"
+#run_failure_scenario "kafka-failure-1-consumer" "1" "Falla + 1 Consumer"
 
 # Escenario 5: Recuperación ante falla con 5 consumidores
-run_failure_scenario "kafka-failure-5-consumers" "5" "Falla + 5 Consumers"
+#run_failure_scenario "kafka-failure-5-consumers" "5" "Falla + 5 Consumers"
 
 # Escenario 6: Recuperación ante falla con 10 consumidores
-run_failure_scenario "kafka-failure-10-consumers" "10" "Falla + 10 Consumers"
+#run_failure_scenario "kafka-failure-10-consumers" "10" "Falla + 10 Consumers"
 
 # Escenario 1: 1 consumidor
 run_scenario "kafka-1-consumer" "1" "Kafka"
@@ -174,6 +233,7 @@ run_scenario "kafka-10-consumers" "10" "Kafka"
 
 # Escenario 9: Spike de tráfico con 10 consumidores
 #run_spike_scenario "kafka-spike-10-consumers" "10" "Spike de Tráfico + 10 Consumers"
+
 
 echo ""
 echo "═══════════════════════════════════════════════════"

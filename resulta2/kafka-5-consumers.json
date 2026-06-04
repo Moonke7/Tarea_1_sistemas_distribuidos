@@ -5,40 +5,40 @@
   },
   "resultados": {
     "throughput": {
-      "total_consultas": 2352,
-      "exitosas": 1420,
-      "tiempo_total_segundos": 50.87,
-      "throughput_qps": 27.91
+      "total_consultas": 2356,
+      "exitosas": 1371,
+      "tiempo_total_segundos": 52.96,
+      "throughput_qps": 25.89
     },
     "latencia": {
-      "latencia_p50_ms": 6684.357166290283,
-      "latencia_p95_ms": 18793.402945995327
+      "latencia_p50_ms": 5920.166254043579,
+      "latencia_p95_ms": 18307.185173034668
     },
     "retry_rate": {
-      "total": 2352,
-      "con_reintentos": 852,
-      "retry_rate_porcentaje": 36.22
+      "total": 2356,
+      "con_reintentos": 856,
+      "retry_rate_porcentaje": 36.33
     },
     "recovery_rate": {
-      "total_reintentos": 852,
-      "recuperados": 555,
-      "recovery_rate_porcentaje": 65.14
+      "total_reintentos": 856,
+      "recuperados": 452,
+      "recovery_rate_porcentaje": 52.8
     },
     "dlq_rate": {
-      "total_mensajes": 2352,
-      "total_dlq": 80,
-      "dlq_rate_porcentaje": 3.4
+      "total_mensajes": 2356,
+      "total_dlq": 129,
+      "dlq_rate_porcentaje": 5.48
     },
     "backlog_size": {
-      "peak_lag_queries": 460,
-      "peak_lag_retry": 219,
-      "last_sample_ts": "2026-06-03T22:36:32.158997",
-      "total_samples": 24
+      "peak_lag_queries": 383,
+      "peak_lag_retry": 207,
+      "last_sample_ts": "2026-06-04T02:11:22.680537",
+      "total_samples": 25
     },
     "recovery_time": {
-      "restore_timestamp": "2026-06-03T22:34:21.789575",
-      "drained_timestamp": "2026-06-03T22:34:36.402427",
-      "recovery_time_seconds": 14.61
+      "restore_timestamp": "2026-06-04T02:09:08.439855",
+      "drained_timestamp": "2026-06-04T02:09:21.858903",
+      "recovery_time_seconds": 13.42
     }
   }
 }
